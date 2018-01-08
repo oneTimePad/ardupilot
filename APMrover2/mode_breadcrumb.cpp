@@ -9,10 +9,12 @@ bool ModeBreadcrumb::_enter()
         return false;
     }
 
-    // create semaphore
-    _crumbs_sem = hal.util->new_semaphore();
-    if (_crumbs_sem == nullptr) {
-        return false;
+    if (_crumbs_sem == nullptr){
+        // create semaphore
+        _crumbs_sem = hal.util->new_semaphore();
+        if (_crumbs_sem == nullptr) {
+            return false;
+        }
     }
 
     _current_crumb = nullptr;
