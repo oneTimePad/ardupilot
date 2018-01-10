@@ -28,10 +28,13 @@ Mode *Rover::mode_from_mode_num(const enum mode num)
         ret = &mode_smartrtl;
         break;
     case GUIDED:
-       ret = &mode_guided;
+        ret = &mode_guided;
         break;
     case INITIALISING:
         ret = &mode_initializing;
+        break;
+    case BREADCRUMB:
+        ret = &mode_breadcrumb;
         break;
     default:
         break;

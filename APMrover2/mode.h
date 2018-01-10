@@ -278,6 +278,51 @@ protected:
     float _desired_yaw_rate_cds;// target turn rate centi-degrees per second
 };
 
+class ModeBreadcrumb : public ModeGuided
+{
+public:
+
+    uint32_t mode_number() const override { return BREADCRUMB; }
+    const char *name4() const override { return "BREADCRUMB"; }
+
+    // methods that affect movement of the vehicle in this mode
+    void update() override;
+
+    // attributes of the mode
+    bool is_autopilot_mode() const override { return true; }
+
+    void mavlink_packet_received(const mavlink_message_t &msg);
+
+
+protected:
+
+    bool _enter() override;
+
+    void _exit()  override;
+
+private:
+
+    uint8_t target_srcid = 2; //#TODO maybe make a user parameter?
+
+    Location target_loc;
+    Vector3f target_vel;
+
+    Location *_current_crumb; //waypoint crumb we are going to
+    Location *_crumbs;    //pointer to circular queue that stores points that target vehicle crossed
+
+    const uint16_t crumbs_max = 500;  // maximum size of the queue #TODO maybe make a user parameter?
+
+    uint16_t _crumbs_tail = 0; //end of the queue
+    uint16_t _crumbs_head = 0; //start of the queue
+
+    AP_HAL::Semaphore *_crumbs_sem; // semaphore for updating the crumbs queue
+
+    const float closure_speed = 10.0f;
+    const float distance_to_stop = 2.0f; //maintain 2m from the target
+
+    void run_lonely_mode();
+    Mode *lonely_mode;
+};
 
 class ModeHold : public Mode
 {

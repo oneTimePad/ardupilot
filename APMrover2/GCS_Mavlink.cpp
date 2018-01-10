@@ -643,6 +643,14 @@ void GCS_MAVLINK_Rover::handle_change_alt_request(AP_Mission::Mission_Command &c
     // nothing to do
 }
 
+void GCS_MAVLINK_Rover::packetReceived(const mavlink_status_t &status, mavlink_message_t &msg)
+{
+    //breadcrumb needs to see GLOBAL_POSITION_INT
+    rover.mode_breadcrumb.mavlink_packet_received(msg);
+
+    GCS_MAVLINK::packetReceived(status,msg);
+}
+
 void GCS_MAVLINK_Rover::handleMessage(mavlink_message_t* msg)
 {
     switch (msg->msgid) {
@@ -1005,7 +1013,7 @@ void GCS_MAVLINK_Rover::handleMessage(mavlink_message_t* msg)
 
         mavlink_manual_control_t packet;
         mavlink_msg_manual_control_decode(msg, &packet);
-        
+
         const int16_t roll = (packet.y == INT16_MAX) ? 0 : rover.channel_steer->get_radio_min() + (rover.channel_steer->get_radio_max() - rover.channel_steer->get_radio_min()) * (packet.y + 1000) / 2000.0f;
         const int16_t throttle = (packet.z == INT16_MAX) ? 0 : rover.channel_throttle->get_radio_min() + (rover.channel_throttle->get_radio_max() - rover.channel_throttle->get_radio_min()) * (packet.z + 1000) / 2000.0f;
         hal.rcin->set_override(uint8_t(rover.rcmap.roll() - 1), roll);
