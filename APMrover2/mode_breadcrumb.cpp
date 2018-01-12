@@ -9,12 +9,10 @@ bool ModeBreadcrumb::_enter()
         return false;
     }
 
-    if (_crumbs_sem == nullptr){
-        // create semaphore
-        _crumbs_sem = hal.util->new_semaphore();
-        if (_crumbs_sem == nullptr) {
-            return false;
-        }
+    // create semaphore
+    _crumbs_sem = hal.util->new_semaphore();
+    if (_crumbs_sem == nullptr) {
+        return false;
     }
 
     _current_crumb = nullptr;
@@ -26,6 +24,8 @@ bool ModeBreadcrumb::_enter()
     _crumbs_head = 0;
 
     lonely_mode = nullptr;
+
+    last_crumb_received = rover.current_loc;
 
     //reuse guided mode
     if (!ModeGuided::_enter()) {
@@ -75,25 +75,23 @@ void ModeBreadcrumb::update()
         Vector3f to_vehicle = location_3d_diff_NED(rover.current_loc, target_loc);
         const float distance_to_vehicle = to_vehicle.length();
 
-        //assign to default value (won't be used)
-        float desired_speed = -1.0f;
-
         //maintain at greater than distance_to_stop from target
         if (fabsf(distance_to_vehicle) > distance_to_stop) {
             //we need to speed up
             to_vehicle *= closure_speed * 100; // m/s to cm/s (which set_desired_speed takes)
-            to_vehicle+=target_vel;
-
-            desired_speed = to_vehicle.length();
-        } else if (fabsf(distance_to_vehicle) < distance_to_stop) {
-            //too close. stop until target is far enough away
-            desired_speed = 0.0f;
+            //hal.console->printf("%s\n","go faster");
+        } else if (fabsf(distance_to_vehicle) <= distance_to_stop) {
+            //too close. back up
+            hal.console->printf("%s\n","back up");
+            to_vehicle = -to_vehicle;
+            return;
         }
 
-        //don't change speed if we are distance_to_stop away;
-        if (desired_speed != -1.0f) {
-            Mode::set_desired_speed(desired_speed);
-        }
+        to_vehicle += target_vel;
+
+        float desired_speed = to_vehicle.length();
+        //hal.console->printf("%f\n",desired_speed);
+        Mode::set_desired_speed(desired_speed);
 
         // re-use guided mode with set waypoint
         ModeGuided::update();
@@ -154,22 +152,6 @@ void ModeBreadcrumb::mavlink_packet_received(const mavlink_message_t &msg)
         return;
     }
 
-    uint16_t crumbs_queue_size = (_crumbs_tail >= _crumbs_head) ? (_crumbs_tail - _crumbs_head) : crumbs_max - (_crumbs_head-_crumbs_tail);
-
-    if (crumbs_queue_size >= crumbs_max) {
-        _crumbs_sem->give();
-        return;
-    }
-
-    //loop back around the queue to the beggining
-    if (_crumbs_tail >= crumbs_max) {
-        _crumbs_tail = 0;
-    }
-
-    _crumbs[_crumbs_tail].lat = packet.lat;
-    _crumbs[_crumbs_tail].lng = packet.lon;
-    _crumbs[_crumbs_tail++].alt = 0.0f; //rover doesn't use alt
-
     //target location and velocity used to dynamically change rover speed
     target_loc.lat = packet.lat;
     target_loc.lng = packet.lon;
@@ -177,6 +159,41 @@ void ModeBreadcrumb::mavlink_packet_received(const mavlink_message_t &msg)
     target_vel.x = packet.vx/100.0f; // cm/s to m/s
     target_vel.y = packet.vy/100.0f; // cm/s to m/s
     target_vel.z = 0.0f;
+
+    uint16_t crumbs_queue_size = (_crumbs_tail >= _crumbs_head) ? (_crumbs_tail - _crumbs_head) : crumbs_max - (_crumbs_head-_crumbs_tail);
+
+    if (crumbs_queue_size >= crumbs_max) {
+        _crumbs_sem->give();
+        return;
+    }
+
+    Location new_crumb;
+    new_crumb.lat = packet.lat;
+    new_crumb.lng = packet.lon;
+    new_crumb.alt = 0.0f;//packet.relative_alt / 10; // mm -> cm
+
+
+    //hal.console->printf("crumb size %d\n",crumbs_queue_size);
+    Vector3f to_vehicle = location_3d_diff_NED(last_crumb_received, new_crumb);
+
+    const float distance_to_last_crum = to_vehicle.length();
+    //hal.console->printf("%f\n",distance_to_last_crum);
+    bool add_crumb = distance_to_last_crum > distance_to_stop;
+
+    //hal.console->printf("%lu %lu %lu %lu %f %f\n",new_crumb.lat,last_crumb_added.lat,new_crumb.lng,last_crumb_added.lng,
+    //                                                new_crumb.alt,last_crumb_added.alt);
+    //hal.console->printf("%d %f\n",add_crumb,distance_to_last_crum);
+
+    //loop back around the queue to the beggining
+    if (_crumbs_tail >= crumbs_max) {
+        _crumbs_tail = 0;
+    }
+
+    if (add_crumb){
+        hal.console->printf("ADDED crumb\n");
+        last_crumb_received = new_crumb;
+        _crumbs[_crumbs_tail++] = new_crumb;
+    }
 
     _crumbs_sem->give();
 

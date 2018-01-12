@@ -309,6 +309,7 @@ private:
 
     Location *_current_crumb; //waypoint crumb we are going to
     Location *_crumbs;    //pointer to circular queue that stores points that target vehicle crossed
+    Location last_crumb_received; //used to prune crumbs to close to the previous one
 
     const uint16_t crumbs_max = 500;  // maximum size of the queue #TODO maybe make a user parameter?
 
@@ -318,7 +319,7 @@ private:
     AP_HAL::Semaphore *_crumbs_sem; // semaphore for updating the crumbs queue
 
     const float closure_speed = 10.0f;
-    const float distance_to_stop = 2.0f; //maintain 2m from the target
+    const float distance_to_stop = 0.5f; //maintain 2m from the target
 
     void run_lonely_mode();
     Mode *lonely_mode;
