@@ -118,6 +118,10 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = guided_nogps_init(ignore_checks);
             break;
 
+        case DEPLOY:
+            success = deploy_init(ignore_checks);
+            break;
+
         default:
             success = false;
             break;
@@ -126,12 +130,12 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
 #if FRAME_CONFIG == HELI_FRAME
 failed:
 #endif
-    
+
     // update flight mode
     if (success) {
         // perform any cleanup required by previous flight mode
         exit_mode(control_mode, mode);
-        
+
         prev_control_mode = control_mode;
         prev_control_mode_reason = control_mode_reason;
 
@@ -147,11 +151,11 @@ failed:
         // but it should be harmless to disable the fence temporarily in these situations as well
         fence.manual_recovery_start();
 #endif
-        
+
 #if FRSKY_TELEM_ENABLED == ENABLED
         frsky_telemetry.update_control_mode(control_mode);
 #endif
-        
+
     } else {
         // Log error that we failed to enter desired flight mode
         Log_Write_Error(ERROR_SUBSYSTEM_FLIGHT_MODE,mode);
@@ -348,7 +352,7 @@ bool Copter::mode_has_manual_throttle(control_mode_t mode)
 //  arming_from_gcs should be set to true if the arming request comes from the ground station
 bool Copter::mode_allows_arming(control_mode_t mode, bool arming_from_gcs)
 {
-    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && (mode == GUIDED || mode == GUIDED_NOGPS))) {
+    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && (mode == GUIDED || mode == GUIDED_NOGPS || mode == DEPLOY))) {
         return true;
     }
     return false;
@@ -503,4 +507,3 @@ void Copter::print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
         break;
     }
 }
-

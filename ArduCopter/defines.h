@@ -72,7 +72,8 @@ enum aux_sw_func {
     AUXSW_PRECISION_LOITER =    39,  // enable precision loiter
     AUXSW_AVOID_PROXIMITY =     40,  // enable object avoidance using proximity sensors (ie. horizontal lidar)
     AUXSW_ARMDISARM =           41,  // arm or disarm vehicle
-    AUXSW_SWITCH_MAX,
+    AUXSW_SWITCH_MAX=           42,
+    AUVSW_DEPLOY
 };
 
 // Frame types
@@ -104,6 +105,7 @@ enum control_mode_t {
     THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
     AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
     GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
+    DEPLOY =       21,
 };
 
 enum mode_reason_t {
@@ -124,6 +126,7 @@ enum mode_reason_t {
     MODE_REASON_AVOIDANCE,
     MODE_REASON_AVOIDANCE_RECOVERY,
     MODE_REASON_THROW_COMPLETE,
+    MODE_REASON_DEPLOY_COMPLETE
 };
 
 // Tuning enumeration
@@ -267,6 +270,15 @@ enum ThrowModeStage {
 enum ThrowModeType {
     ThrowType_Upward = 0,
     ThrowType_Drop = 1
+};
+
+// Deploy stages
+enum DeployModeStage {
+    Deploy_Disarmed,
+    Deploy_Detecting,
+    Deploy_Deploying,
+    Deploy_Switch_Mode
+
 };
 
 enum LandStateType {

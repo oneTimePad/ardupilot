@@ -9,6 +9,8 @@ bool Copter::brake_init(bool ignore_checks)
 {
     if (position_ok() || ignore_checks) {
 
+        brake_timed_out = false;
+
         // set desired acceleration to zero
         wp_nav->clear_pilot_desired_acceleration();
 
@@ -79,10 +81,17 @@ void Copter::brake_run()
     pos_control->update_z_controller();
 
     if (brake_timeout_ms != 0 && millis()-brake_timeout_start >= brake_timeout_ms) {
-        if (!set_mode(LOITER, MODE_REASON_BRAKE_TIMEOUT)) {
-            set_mode(ALT_HOLD, MODE_REASON_BRAKE_TIMEOUT);
-        }
+        brake_timed_out = true;
+      //  if (!set_mode(LOITER, MODE_REASON_BRAKE_TIMEOUT)) {
+      //      set_mode(ALT_HOLD, MODE_REASON_BRAKE_TIMEOUT);
+      //  }
+
     }
+}
+
+bool Copter::did_brake_time_out()
+{
+  return brake_timed_out;
 }
 
 void Copter::brake_timeout_to_loiter_ms(uint32_t timeout_ms)
