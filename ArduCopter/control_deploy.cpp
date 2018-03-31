@@ -78,6 +78,12 @@ void Copter::deploy_run()
     switch (deploy_state.stage) {
 
     case Deploy_Disarmed:
+
+        if (!motors->armed() && deploy_arm) {
+           // we received the arming command from the main copter
+           motors->init_arm_motors(true);
+           send_deploy_cmd = true;
+        }
         // reuse some of the throw parameters... for now
         // prevent motors from rotating before the throw is detected unless enabled by the user
         if (g.throw_motor_start == 1) {
@@ -224,4 +230,23 @@ bool Copter::deploy_detected()
     } else {
         return false;
     }
+}
+
+bool Copter::handle_msg(const mavlink_message_t &msg)
+{
+  if (control_mode != DEPLOY) {
+     return;
+  }
+
+  if (msg.msgid != MAVLINK_MSG_ID_DEPLOY_ARM) {
+     return;
+  }
+
+  deploy_arm = true;
+
+  if (send_deploy_cmd) {
+     return true;
+  }
+
+  return false;
 }

@@ -441,6 +441,8 @@ private:
         float free_fall_start_velz; // vertical velocity when free fall was detected
     } deploy_state = {Deploy_Disarmed, Deploy_Disarmed, 0, false, 0, 0.0f};
 
+    bool deploy_arm;
+    bool send_deploy_cmd;
     // Battery Sensors
     AP_BattMonitor battery;
 

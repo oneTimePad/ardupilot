@@ -370,6 +370,7 @@ void Copter::notify_flight_mode(control_mode_t mode)
         case CIRCLE:
         case AVOID_ADSB:
         case GUIDED_NOGPS:
+        case DEPLOY:
         case LAND:
             // autopilot modes
             AP_Notify::flags.autopilot_mode = true;
@@ -435,6 +436,9 @@ void Copter::notify_flight_mode(control_mode_t mode)
             break;
         case GUIDED_NOGPS:
             notify.set_flight_mode_str("GNGP");
+            break;
+        case DEPLOY:
+            notify.set_flight_mode_str("DEPL");
             break;
         default:
             notify.set_flight_mode_str("----");
