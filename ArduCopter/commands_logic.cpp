@@ -22,6 +22,7 @@ bool Copter::start_command(const AP_Mission::Mission_Command& cmd)
         break;
 
     case MAV_CMD_NAV_DEPLOY:
+        hal.console->printf("DOING DEPLOY COMMAND!\n");
         do_nav_deploy(cmd);
         break;
     case MAV_CMD_NAV_LAND:              // 21 LAND to Waypoint
@@ -888,16 +889,21 @@ bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
   }
 
   if (carrier_deployed && carrier_deploying) {
+    hal.console->printf("MOVING ON!\n");
     gcs_send_text_fmt(MAV_SEVERITY_INFO, "Copter %i deployed! Moving to next waypoint.", cmd.p1);
     copter.carrier_deployed = false;
     copter.carrier_deploying = false;
+    copter.carrier_deploy_id = -1;
     return true;
   }
 
   // tell MAV to arm
-  gcs_send_message(MSG_DEPLOY_ARM);
+  if (copter.carrier_deploy_id == -1) {
+      gcs_send_message(MSG_DEPLOY_ARM);
+  }
 
   if (copter.carrier_deploy_id == cmd.p1 && !copter.carrier_deploying) {
+     hal.console->printf("DEPLOYING!\n");
      // spin 360 servo
      ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_high);
      copter.carrier_deploying = true;
@@ -907,6 +913,7 @@ bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
   }
 
   if (copter.carrier_deploy_id == cmd.p1 && copter.carrier_deploying) {
+      hal.console->printf("DONE DEPLOYING!");
       // stop spinnning 360 servo
       if ((millis() - carrier_deploying_time) / 1000 >= g2.depl_max_time) {
           ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_low);

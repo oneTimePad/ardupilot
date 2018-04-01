@@ -974,7 +974,7 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @DisplayName: Deployment Time
     // @Description: Time to have servo at high pwm in seconds
     // @User: Standard
-    AP_GROUPINFO("DEPL_MAX_TIME", 23, ParametersG2, depl_max_time, 0),
+    AP_GROUPINFO("DEPL_MAX_TIME", 23, ParametersG2, depl_max_time, 1),
 
 
 
