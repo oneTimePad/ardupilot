@@ -538,6 +538,10 @@ public:
     AP_Beacon beacon;
 
     AP_Int8 depl_nextmode;
+    AP_Int8 depl_channel;
+    AP_Int8 depl_pwm_high;
+    AP_Int8 depl_pwm_low;
+    AP_Int16 depl_max_time;
 
 #if VISUAL_ODOMETRY_ENABLED == ENABLED
     // Visual Odometry camera

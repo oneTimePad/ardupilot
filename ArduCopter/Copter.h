@@ -443,6 +443,11 @@ private:
 
     bool deploy_arm;
     bool send_deploy_cmd;
+
+    int carrier_deploy_id = -1;
+    float carrier_deploying_time;
+    bool carrier_deploying = false;
+    bool carrier_deployed = false;
     // Battery Sensors
     AP_BattMonitor battery;
 
@@ -711,6 +716,9 @@ private:
     void send_rangefinder(mavlink_channel_t chan);
     void send_proximity(mavlink_channel_t chan, uint16_t count_max);
     void send_rpm(mavlink_channel_t chan);
+    void send_deploy(mavlink_channel_t chan);
+    void send_deploy_complete(mavlink_channel_t chan);
+    void send_deploy_arm(mavlink_channel_t chan);
     void rpm_update();
     void button_update();
     void init_proximity();
@@ -933,6 +941,7 @@ private:
     bool deploy_init(bool ignore_checks);
     bool deploy_detected();
     void deploy_run();
+    bool deploy_handle_msg(const mavlink_message_t &msg);
 
     bool rtl_init(bool ignore_checks);
     void rtl_restart_without_terrain();
@@ -1123,6 +1132,7 @@ private:
     bool do_guided(const AP_Mission::Mission_Command& cmd);
     void do_takeoff(const AP_Mission::Mission_Command& cmd);
     void do_nav_wp(const AP_Mission::Mission_Command& cmd);
+    void do_nav_deploy(const AP_Mission::Mission_Command& cmd);
     void do_land(const AP_Mission::Mission_Command& cmd);
     void do_loiter_unlimited(const AP_Mission::Mission_Command& cmd);
     void do_circle(const AP_Mission::Mission_Command& cmd);
@@ -1151,6 +1161,7 @@ private:
     void do_gripper(const AP_Mission::Mission_Command& cmd);
 #endif
     bool verify_nav_wp(const AP_Mission::Mission_Command& cmd);
+    bool verify_nav_deploy(const AP_Mission::Mission_Command& cmd);
     bool verify_circle(const AP_Mission::Mission_Command& cmd);
     bool verify_spline_wp(const AP_Mission::Mission_Command& cmd);
 #if NAV_GUIDED == ENABLED

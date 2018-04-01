@@ -263,6 +263,10 @@ void Copter::update_flight_mode()
             guided_nogps_run();
             break;
 
+        case DEPLOY:
+            deploy_run();
+            break;
+
         default:
             break;
     }

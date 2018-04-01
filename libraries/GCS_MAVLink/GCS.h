@@ -73,6 +73,8 @@ enum ap_message {
     MSG_BATTERY_STATUS,
     MSG_AOA_SSA,
     MSG_DEPLOY,
+    MSG_DEPLOY_COMPLETE,
+    MSG_DEPLOY_ARM,
     MSG_RETRY_DEFERRED // this must be last
 };
 

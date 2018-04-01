@@ -53,6 +53,7 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     case CIRCLE:
     case POSHOLD:
     case BRAKE:
+    case DEPLOY:
         base_mode |= MAV_MODE_FLAG_GUIDED_ENABLED;
         // note that MAV_MODE_FLAG_AUTO_ENABLED does not match what
         // APM does in any mode, as that is defined as "system finds its own goal
@@ -85,10 +86,27 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
 }
 
 
-NONINLINE void Copter::send_deploy(mavlink_channel_t chan)
+
+NOINLINE void Copter::send_deploy_arm(mavlink_channel_t chan)
+{
+  mavlink_msg_deploy_arm_send(
+      chan,
+      mission.get_current_nav_cmd().p1 // holds the SYSID of the copter to arm
+  );
+}
+
+NOINLINE void Copter::send_deploy(mavlink_channel_t chan)
 {
   mavlink_msg_deploy_send(
-      chan);
+      chan,
+      0);
+}
+
+NOINLINE void Copter::send_deploy_complete(mavlink_channel_t chan)
+{
+  mavlink_msg_deploy_complete_send(
+      chan,
+      0);
 }
 
 NOINLINE void Copter::send_attitude(mavlink_channel_t chan)
@@ -381,10 +399,20 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
 #endif
 
     switch(id) {
+
+    case MSG_DEPLOY_COMPLETE:
+        CHECK_PAYLOAD_SIZE(DEPLOY_COMPLETE);
+        copter.send_deploy_complete(chan);
+        break;
+    case MSG_DEPLOY_ARM:
+        CHECK_PAYLOAD_SIZE(DEPLOY_ARM);
+        copter.send_deploy_arm(chan);
+        break;
     // send the deploy MSG to GCS so carrier can get it
     case MSG_DEPLOY:
         CHECK_PAYLOAD_SIZE(DEPLOY);
         copter.send_deploy(chan);
+        break;
     case MSG_HEARTBEAT:
         CHECK_PAYLOAD_SIZE(HEARTBEAT);
         last_heartbeat_time = AP_HAL::millis();
@@ -834,10 +862,11 @@ void GCS_MAVLINK_Copter::packetReceived(const mavlink_status_t &status,
     if (copter.g2.dev_options.get() & DevOptionADSBMAVLink) {
         // optional handling of GLOBAL_POSITION_INT as a MAVLink based avoidance source
         copter.avoidance_adsb.handle_msg(msg);
-        if (copter.deploy.handle_msg(msg)) {
-           // we are now armed... send deploy request to carrier
-           send_message(MSG_DEPLOY);
-        }
+    }
+    if (copter.deploy_handle_msg(msg)) {
+       // we are now armed... send deploy request to carrier
+       hal.console->printf("SENDING MESSAGE\n");
+       send_message(MSG_DEPLOY);
     }
     GCS_MAVLINK::packetReceived(status, msg);
 }
@@ -848,6 +877,11 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
 
     switch (msg->msgid) {
 
+    case MAVLINK_MSG_ID_DEPLOY:
+    {
+        copter.carrier_deploy_id = msg->sysid;
+        break;
+    }
     case MAVLINK_MSG_ID_HEARTBEAT:      // MAV ID: 0
     {
         // We keep track of the last time we received a heartbeat from our GCS for failsafe purposes

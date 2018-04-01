@@ -950,7 +950,35 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Description: Vehicle will switch to this mode after the throw is successfully completed.  Default is to stay in throw mode (18)
     // @Values: 3:Auto,4:Guided,6:RTL,9:Land,17:Brake,18:Throw
     // @User: Standard
-    AP_GROUPINFO("DEPL_NEXTMODE", 19, ParametersG2, depl_nextmode, 18),
+    AP_GROUPINFO("DEPL_NEXTMODE", 19, ParametersG2, depl_nextmode, 3),
+
+    // @Param: DEPL_CHANNEL
+    // @DisplayName: Deploy servo channel to use
+    // @Description: Vehicle will use this channel to control servo for drop mechanism
+    // @User: Standard
+    AP_GROUPINFO("DEPL_CHANNEL", 20, ParametersG2, depl_channel, 7),
+
+    // @Param: DEPL_PWM_LOW
+    // @DisplayName: Low PWM deploy
+    // @Description: Low PWM value for use when not deploying
+    // @User: Standard
+    AP_GROUPINFO("DEPL_PWM_LOW", 21, ParametersG2, depl_pwm_low, 0),
+
+    // @Param: DEPL_PWM_HIGH
+    // @DisplayName: High PWM deploy
+    // @Description: High PWM value for use when deploying
+    // @User: Standard
+    AP_GROUPINFO("DEPL_PWM_HIGH", 22, ParametersG2, depl_pwm_high, 0),
+
+    // @Param: DEPL_MAX_TIME
+    // @DisplayName: Deployment Time
+    // @Description: Time to have servo at high pwm in seconds
+    // @User: Standard
+    AP_GROUPINFO("DEPL_MAX_TIME", 23, ParametersG2, depl_max_time, 0),
+
+
+
+
 
 #if PROXIMITY_ENABLED == ENABLED
     // @Group: PRX

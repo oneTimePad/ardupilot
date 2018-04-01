@@ -21,6 +21,9 @@ bool Copter::start_command(const AP_Mission::Mission_Command& cmd)
         do_nav_wp(cmd);
         break;
 
+    case MAV_CMD_NAV_DEPLOY:
+        do_nav_deploy(cmd);
+        break;
     case MAV_CMD_NAV_LAND:              // 21 LAND to Waypoint
         do_land(cmd);
         break;
@@ -84,20 +87,19 @@ bool Copter::start_command(const AP_Mission::Mission_Command& cmd)
     case MAV_CMD_DO_SET_HOME:             // 179
         do_set_home(cmd);
         break;
-
     case MAV_CMD_DO_SET_SERVO:
         ServoRelayEvents.do_set_servo(cmd.content.servo.channel, cmd.content.servo.pwm);
         break;
-        
+
     case MAV_CMD_DO_SET_RELAY:
         ServoRelayEvents.do_set_relay(cmd.content.relay.num, cmd.content.relay.state);
         break;
-        
+
     case MAV_CMD_DO_REPEAT_SERVO:
         ServoRelayEvents.do_repeat_servo(cmd.content.repeat_servo.channel, cmd.content.repeat_servo.pwm,
                                          cmd.content.repeat_servo.repeat_count, cmd.content.repeat_servo.cycle_time * 1000.0f);
         break;
-        
+
     case MAV_CMD_DO_REPEAT_RELAY:
         ServoRelayEvents.do_repeat_relay(cmd.content.repeat_relay.num, cmd.content.repeat_relay.repeat_count,
                                          cmd.content.repeat_relay.cycle_time * 1000.0f);
@@ -112,7 +114,7 @@ bool Copter::start_command(const AP_Mission::Mission_Command& cmd)
         // point the camera to a specified angle
         do_mount_control(cmd);
         break;
-    
+
     case MAV_CMD_DO_FENCE_ENABLE:
 #if AC_FENCE == ENABLED
         if (cmd.p1 == 0) { //disable
@@ -210,6 +212,9 @@ bool Copter::verify_command(const AP_Mission::Mission_Command& cmd)
 
     case MAV_CMD_NAV_WAYPOINT:
         return verify_nav_wp(cmd);
+
+    case MAV_CMD_NAV_DEPLOY:
+        return verify_nav_deploy(cmd);
 
     case MAV_CMD_NAV_LAND:
         return verify_land();
@@ -318,6 +323,17 @@ void Copter::do_takeoff(const AP_Mission::Mission_Command& cmd)
     auto_takeoff_start(cmd.content.location);
 }
 
+
+// do_nav_deploy - initiates move to waypoint and at waypoint deploys MAV
+void Copter::do_nav_deploy(const AP_Mission::Mission_Command& cmd)
+{
+  AP_Mission::Mission_Command cmd_wp = cmd;
+  cmd_wp.p1 = 0;
+  // reuse waypoint nav
+  do_nav_wp(cmd_wp);
+
+}
+
 // do_nav_wp - initiate move to next waypoint
 void Copter::do_nav_wp(const AP_Mission::Mission_Command& cmd)
 {
@@ -338,7 +354,7 @@ void Copter::do_nav_wp(const AP_Mission::Mission_Command& cmd)
             target_loc.set_alt_cm(current_loc.alt, current_loc.get_alt_frame());
         }
     }
-    
+
     // this will be used to remember the time in millis after we reach or pass the WP.
     loiter_time = 0;
     // this is the delay, stored in seconds
@@ -861,6 +877,46 @@ bool Copter::verify_payload_place()
 }
 #undef debug
 
+// varify_nav_deploy - performs deployment state-machine
+// loiter and waits for copter to deploy
+bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
+{
+  AP_Mission::Mission_Command cmd_wp = cmd;
+  cmd_wp.p1 = 0;
+  if (!verify_nav_wp(cmd_wp)) {
+     return false;
+  }
+
+  if (carrier_deployed && carrier_deploying) {
+    gcs_send_text_fmt(MAV_SEVERITY_INFO, "Copter %i deployed! Moving to next waypoint.", cmd.p1);
+    copter.carrier_deployed = false;
+    copter.carrier_deploying = false;
+    return true;
+  }
+
+  // tell MAV to arm
+  gcs_send_message(MSG_DEPLOY_ARM);
+
+  if (copter.carrier_deploy_id == cmd.p1 && !copter.carrier_deploying) {
+     // spin 360 servo
+     ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_high);
+     copter.carrier_deploying = true;
+     copter.carrier_deploying_time = millis();
+     gcs_send_text_fmt(MAV_SEVERITY_INFO, "Deploying copter %i!", cmd.p1);
+
+  }
+
+  if (copter.carrier_deploy_id == cmd.p1 && copter.carrier_deploying) {
+      // stop spinnning 360 servo
+      if ((millis() - carrier_deploying_time) / 1000 >= g2.depl_max_time) {
+          ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_low);
+      }
+
+  }
+
+  return false;
+}
+
 // verify_nav_wp - check if we have reached the next way point
 bool Copter::verify_nav_wp(const AP_Mission::Mission_Command& cmd)
 {
@@ -1162,7 +1218,7 @@ void Copter::log_picture()
     } else {
         if (should_log(MASK_LOG_CAMERA)) {
             DataFlash.Log_Write_Trigger(ahrs, gps, current_loc);
-        }      
+        }
     }
 }
 

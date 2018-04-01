@@ -19,6 +19,7 @@ bool Copter::deploy_init(bool ignore_checks)
 // should be called at 100hz or more
 void Copter::deploy_run()
 {
+
     /* Throw State Machine
     Throw_Disarmed - motors are off
     Throw_Detecting -  motors are on and we are waiting for the throw
@@ -58,6 +59,8 @@ void Copter::deploy_run()
 
     } else if (deploy_state.stage == Deploy_Switch_Mode) {
         gcs_send_text(MAV_SEVERITY_INFO, "MAV SUCCESSFULLY DEPLOYED! - switching modes");
+        // tell carrier deployment is complete
+        gcs_send_message(MSG_DEPLOY_COMPLETE);
         if (!deploy_state.nextmode_attempted) {
           switch (g2.depl_nextmode) {
               case AUTO:
@@ -78,10 +81,9 @@ void Copter::deploy_run()
     switch (deploy_state.stage) {
 
     case Deploy_Disarmed:
-
         if (!motors->armed() && deploy_arm) {
            // we received the arming command from the main copter
-           motors->init_arm_motors(true);
+           copter.init_arm_motors(true);
            send_deploy_cmd = true;
         }
         // reuse some of the throw parameters... for now
@@ -232,15 +234,25 @@ bool Copter::deploy_detected()
     }
 }
 
-bool Copter::handle_msg(const mavlink_message_t &msg)
+bool Copter::deploy_handle_msg(const mavlink_message_t &msg)
 {
+
   if (control_mode != DEPLOY) {
-     return;
+     return false;
   }
 
   if (msg.msgid != MAVLINK_MSG_ID_DEPLOY_ARM) {
-     return;
+     return false;
   }
+
+  mavlink_deploy_arm_t packet;
+  mavlink_msg_deploy_arm_decode(&msg, &packet);
+
+  if (packet.arm_target != g.sysid_this_mav) {
+       return false;
+  }
+
+
 
   deploy_arm = true;
 
