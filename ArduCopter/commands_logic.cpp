@@ -884,26 +884,38 @@ bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
 {
   AP_Mission::Mission_Command cmd_wp = cmd;
   cmd_wp.p1 = 0;
-  if (!verify_nav_wp(cmd_wp)) {
+  if (!copter.carrier_got_to_wp && !verify_nav_wp(cmd_wp)) {
      return false;
+  } else if (!copter.carrier_got_to_wp && verify_nav_wp(cmd_wp)) {
+     copter.carrier_got_to_wp = true;
   }
 
-  if (carrier_deployed && carrier_deploying) {
-    hal.console->printf("MOVING ON!\n");
+  if (copter.carrier_deployed && copter.carrier_deploying) {
     gcs_send_text_fmt(MAV_SEVERITY_INFO, "Copter %i deployed! Moving to next waypoint.", cmd.p1);
+
+    // reset
     copter.carrier_deployed = false;
     copter.carrier_deploying = false;
     copter.carrier_deploy_id = -1;
+    copter.carrier_got_to_wp = false;
+    copter.carrier_stop_delay = 0.0f;
+    copter.carrier_set_servo_low = false;
     return true;
   }
 
+  if (copter.carrier_got_to_wp && copter.carrier_stop_delay == 0.0f) {
+     gcs_send_text_fmt(MAV_SEVERITY_INFO, "Sending Arm Command in %i seconds!", g2.depl_stop_delay);
+     copter.carrier_stop_delay = millis();
+  }
+
   // tell MAV to arm
-  if (copter.carrier_deploy_id == -1) {
-      gcs_send_message(MSG_DEPLOY_ARM);
+  if (copter.carrier_got_to_wp && copter.carrier_deploy_id == -1) {
+      if ((millis() - copter.carrier_stop_delay)/1000 >= g2.depl_stop_delay) {
+          gcs_send_message(MSG_DEPLOY_ARM);
+      }
   }
 
   if (copter.carrier_deploy_id == cmd.p1 && !copter.carrier_deploying) {
-     hal.console->printf("DEPLOYING!\n");
      // spin 360 servo
      ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_high);
      copter.carrier_deploying = true;
@@ -912,11 +924,14 @@ bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
 
   }
 
-  if (copter.carrier_deploy_id == cmd.p1 && copter.carrier_deploying) {
-      hal.console->printf("DONE DEPLOYING!");
+  if (copter.carrier_deploy_id == cmd.p1 && copter.carrier_deploying && !copter.carrier_set_servo_low) {
+
       // stop spinnning 360 servo
-      if ((millis() - carrier_deploying_time) / 1000 >= g2.depl_max_time) {
+      if ((millis() - copter.carrier_deploying_time) / 1000 >= g2.depl_max_time) {
+          gcs_send_text_fmt(MAV_SEVERITY_INFO, "Deployed Copter ! Stopping Mechanism!");
           ServoRelayEvents.do_set_servo(g2.depl_channel, g2.depl_pwm_low);
+          copter.carrier_set_servo_low = true;
+
       }
 
   }

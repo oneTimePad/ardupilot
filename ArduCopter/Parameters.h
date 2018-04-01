@@ -542,6 +542,7 @@ public:
     AP_Int8 depl_pwm_high;
     AP_Int8 depl_pwm_low;
     AP_Int16 depl_max_time;
+    AP_Int16 depl_stop_delay;
 
 #if VISUAL_ODOMETRY_ENABLED == ENABLED
     // Visual Odometry camera

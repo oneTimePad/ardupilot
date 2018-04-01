@@ -89,7 +89,6 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
 
 NOINLINE void Copter::send_deploy_arm(mavlink_channel_t chan)
 {
-  hal.console->printf("sending deploy arm command!\n");
   mavlink_msg_deploy_arm_send(
       chan,
       mission.get_current_nav_cmd().p1 // holds the SYSID of the copter to arm
@@ -866,7 +865,6 @@ void GCS_MAVLINK_Copter::packetReceived(const mavlink_status_t &status,
     }
     if (copter.deploy_handle_msg(msg)) {
        // we are now armed... send deploy request to carrier
-       hal.console->printf("SENDING MESSAGE\n");
        send_message(MSG_DEPLOY);
     }
     GCS_MAVLINK::packetReceived(status, msg);

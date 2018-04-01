@@ -432,6 +432,7 @@ private:
         float free_fall_start_velz;     // vertical velocity when free fall was detected
     } throw_state = {Throw_Disarmed, Throw_Disarmed, 0, false, 0, 0.0f};
 
+    // deployee state-machine
     struct {
         DeployModeStage stage;
         DeployModeStage prev_stage;
@@ -441,13 +442,19 @@ private:
         float free_fall_start_velz; // vertical velocity when free fall was detected
     } deploy_state = {Deploy_Disarmed, Deploy_Disarmed, 0, false, 0, 0.0f};
 
+    // deployee used members
     bool deploy_arm;
     bool send_deploy_cmd;
 
+    // carrier used members
     int carrier_deploy_id = -1;
-    float carrier_deploying_time;
+    float carrier_deploying_time = 0.0f;
+    float carrier_stop_delay = 0.0f;
     bool carrier_deploying = false;
     bool carrier_deployed = false;
+    bool carrier_got_to_wp = false;
+    bool carrier_set_servo_low = false;
+
     // Battery Sensors
     AP_BattMonitor battery;
 

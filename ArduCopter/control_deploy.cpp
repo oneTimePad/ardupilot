@@ -84,7 +84,11 @@ void Copter::deploy_run()
         if (!motors->armed() && deploy_arm) {
            // we received the arming command from the main copter
            copter.init_arm_motors(true);
-           send_deploy_cmd = true;
+
+        }
+
+        if (!send_deploy_cmd && motors->armed()) {
+            send_deploy_cmd = true;
         }
         // reuse some of the throw parameters... for now
         // prevent motors from rotating before the throw is detected unless enabled by the user

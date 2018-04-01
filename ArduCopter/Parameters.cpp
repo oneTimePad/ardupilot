@@ -947,36 +947,40 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
 
     // @Param: DEPL_NEXTMODE
     // @DisplayName: Deploy mode's follow up mode
-    // @Description: Vehicle will switch to this mode after the throw is successfully completed.  Default is to stay in throw mode (18)
+    // @Description: Deployee: Vehicle will switch to this mode after the throw is successfully completed.  Default is to stay in throw mode (18)
     // @Values: 3:Auto,4:Guided,6:RTL,9:Land,17:Brake,18:Throw
     // @User: Standard
     AP_GROUPINFO("DEPL_NEXTMODE", 19, ParametersG2, depl_nextmode, 3),
 
     // @Param: DEPL_CHANNEL
-    // @DisplayName: Deploy servo channel to use
-    // @Description: Vehicle will use this channel to control servo for drop mechanism
+    // @DisplayName: Carrier: Deploy servo channel to use
+    // @Description: Carrier: Vehicle will use this channel to control servo for drop mechanism
     // @User: Standard
     AP_GROUPINFO("DEPL_CHANNEL", 20, ParametersG2, depl_channel, 7),
 
     // @Param: DEPL_PWM_LOW
-    // @DisplayName: Low PWM deploy
-    // @Description: Low PWM value for use when not deploying
+    // @DisplayName: Carrier: Low PWM deploy
+    // @Description: Carrier: Low PWM value for use when not deploying
     // @User: Standard
     AP_GROUPINFO("DEPL_PWM_LOW", 21, ParametersG2, depl_pwm_low, 0),
 
     // @Param: DEPL_PWM_HIGH
-    // @DisplayName: High PWM deploy
-    // @Description: High PWM value for use when deploying
+    // @DisplayName: Carrier: High PWM deploy
+    // @Description: Carrier: High PWM value for use when deploying
     // @User: Standard
     AP_GROUPINFO("DEPL_PWM_HIGH", 22, ParametersG2, depl_pwm_high, 0),
 
     // @Param: DEPL_MAX_TIME
-    // @DisplayName: Deployment Time
-    // @Description: Time to have servo at high pwm in seconds
+    // @DisplayName: Carrier: Deployment Time
+    // @Description: Carrier: Time to have servo at high pwm in seconds
     // @User: Standard
     AP_GROUPINFO("DEPL_MAX_TIME", 23, ParametersG2, depl_max_time, 1),
 
-
+    // @Param: DEPL_MAX_TIME
+    // @DisplayName: Carreri: Delay Time
+    // @Description: Carrier: Time to delay before sending arm command when getting to waypoint
+    // @User: Standard
+    AP_GROUPINFO("DEPL_STOP_DELAY", 24, ParametersG2, depl_stop_delay, 2),
 
 
 
