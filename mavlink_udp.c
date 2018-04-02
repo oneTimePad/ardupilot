@@ -67,8 +67,7 @@ int main(int argc, char* argv[])
 	char target_ip[100];
 
 	float position[6] = {};
-	int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	struct sockaddr_in gcAddr;
+
 	struct sockaddr_in locAddr;
 	//struct sockaddr_in fromAddr;
 	uint8_t buf[BUFFER_LENGTH];
@@ -107,32 +106,63 @@ int main(int argc, char* argv[])
 	locAddr.sin_addr.s_addr = INADDR_ANY;
 	locAddr.sin_port = htons(14551);
 
-	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */
-	if (-1 == bind(sock,(struct sockaddr *)&locAddr, sizeof(struct sockaddr)))
-    {
-		perror("error bind failed");
-		close(sock);
-		exit(EXIT_FAILURE);
-    }
+
+
+
+
+	int sock_carrier = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	struct sockaddr_in gcAddr_carrier;
+	memset(&gcAddr_carrier, 0, sizeof(gcAddr_carrier));
+	gcAddr_carrier.sin_family = AF_INET;
+	gcAddr_carrier.sin_addr.s_addr = inet_addr("127.0.0.1");
+	gcAddr_carrier.sin_port = htons(14550);
+
+	int sock_mav = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	struct sockaddr_in gcAddr_mav;
+	memset(&gcAddr_mav, 0, sizeof(gcAddr_mav));
+	gcAddr_mav.sin_family = AF_INET;
+	gcAddr_mav.sin_addr.s_addr = inet_addr("127.0.0.1");
+	gcAddr_mav.sin_port = htons(14551);
 
 	/* Attempt to make it non blocking */
 #if (defined __QNX__) | (defined __QNXNTO__)
-	if (fcntl(sock, F_SETFL, O_NONBLOCK | FASYNC) < 0)
+	if (fcntl(sock_mav, F_SETFL, O_NONBLOCK | FASYNC) < 0)
 #else
-	if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
+	if (fcntl(sock_mav, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
 #endif
 
     {
 		fprintf(stderr, "error setting nonblocking: %s\n", strerror(errno));
-		close(sock);
+		close(sock_mav);
 		exit(EXIT_FAILURE);
     }
+		/* Attempt to make it non blocking */
+	#if (defined __QNX__) | (defined __QNXNTO__)
+		if (fcntl(sock_carrier, F_SETFL, O_NONBLOCK | FASYNC) < 0)
+	#else
+		if (fcntl(sock_carrier, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
+	#endif
 
+			{
+			fprintf(stderr, "error setting nonblocking: %s\n", strerror(errno));
+			close(sock_carrier);
+			exit(EXIT_FAILURE);
+			}
+	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */
+	if (-1 == bind(sock_mav,(struct sockaddr *)&gcAddr_mav, sizeof(struct sockaddr)))
+    {
+		perror("error bind failed");
+		close(sock_mav);
+		exit(EXIT_FAILURE);
+  }
 
-	memset(&gcAddr, 0, sizeof(gcAddr));
-	gcAddr.sin_family = AF_INET;
-	gcAddr.sin_addr.s_addr = inet_addr(target_ip);
-	gcAddr.sin_port = htons(14550);
+	if (-1 == bind(sock_carrier,(struct sockaddr *)&gcAddr_carrier, sizeof(struct sockaddr)))
+		{
+		perror("error bind failed");
+		close(sock_carrier);
+		exit(EXIT_FAILURE);
+	}
+
 
 
 
@@ -140,9 +170,8 @@ int main(int argc, char* argv[])
     {
 
 		/*Send Heartbeat */
-		mavlink_msg_deploy_complete_pack(2, 200, &msg,0);
-		len = mavlink_msg_to_send_buffer(buf, &msg);
-		bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
+	//	mavlink_msg_gopro_heartbeat_pack(2, 200, &msg,2, 0,0);
+	//	len = mavlink_msg_to_send_buffer(buf, &msg);		bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
 
 		/* Send Status */
 		//mavlink_msg_sys_status_pack(1, 200, &msg, 0, 0, 0, 500, 11000, -1, -1, 0, 0, 0, 0, 0, 0);
@@ -163,7 +192,7 @@ int main(int argc, char* argv[])
 
 
 		memset(buf, 0, BUFFER_LENGTH);
-		recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
+		recsize = recvfrom(sock_carrier, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr_carrier, &fromlen);
 		if (recsize > 0)
       	{
 			// Something received - print out all bytes and parse packet
@@ -175,20 +204,52 @@ int main(int argc, char* argv[])
 			{
 				temp = buf[i];
 				//printf("%02x ", (unsigned char)temp);
-				if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
+				if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status) )
 				{
-					// Packet received
-					//printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-					printf("%d\n", msg.msgid);
+
+					if (msg.msgid == 215) {
+							printf("CARRIER GOT ARM\n");
+					    mavlink_msg_gopro_heartbeat_pack(2, 200, &msg,1, 0,0);
+					    len = mavlink_msg_to_send_buffer(buf, &msg);
+
+					    bytes_sent = sendto(sock_mav, buf, len, 0, (struct sockaddr*)&gcAddr_mav, sizeof (struct sockaddr_in));
+
+					}
 				}
 			}
-			//printf("\n");
 		}
 		memset(buf, 0, BUFFER_LENGTH);
+		recsize = recvfrom(sock_mav, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr_mav, &fromlen);
+		if (recsize > 0)
+				{
+			// Something received - print out all bytes and parse packet
+			mavlink_message_t msg;
+			mavlink_status_t status;
+
+		//	printf("Bytes Received: %d\nDatagram: ", (int)recsize);
+			for (i = 0; i < recsize; ++i)
+			{
+				temp = buf[i];
+	      if ( mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
+					if (msg.msgid == 216) {
+						 mavlink_msg_gopro_get_request_pack(2, 200, &msg,0, 0,0);
+						 len = mavlink_msg_to_send_buffer(buf, &msg);
+						 bytes_sent = sendto(sock_carrier, buf, len, 0, (struct sockaddr*)&gcAddr_carrier, sizeof (struct sockaddr_in));
+					}
+
+					if (msg.msgid == 217) {
+						 mavlink_msg_gopro_get_request_pack(2, 200, &msg,0, 0,0);
+						 len = mavlink_msg_to_send_buffer(buf, &msg);
+						 bytes_sent = sendto(sock_carrier, buf, len, 0, (struct sockaddr*)&gcAddr_carrier, sizeof (struct sockaddr_in));
+					}
+				}
+			}
+
+		memset(buf, 0, BUFFER_LENGTH);
 		sleep(.2); // Sleep one second
-    }
 }
 
+}
 
 /* QNX timer version */
 #if (defined __QNX__) | (defined __QNXNTO__)

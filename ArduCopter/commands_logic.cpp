@@ -911,7 +911,7 @@ bool Copter::verify_nav_deploy(const AP_Mission::Mission_Command& cmd)
   // tell MAV to arm
   if (copter.carrier_got_to_wp && copter.carrier_deploy_id == -1) {
       if ((millis() - copter.carrier_stop_delay)/1000 >= g2.depl_stop_delay) {
-          gcs_send_message(MSG_DEPLOY);
+          gcs_send_message(MSG_DEPLOY_ARM);
       }
   }
 

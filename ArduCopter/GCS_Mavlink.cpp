@@ -89,25 +89,22 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
 
 NOINLINE void Copter::send_deploy_arm(mavlink_channel_t chan)
 {
-  hal.console->printf("%d\n", mission.get_current_nav_cmd().p1);
-  mavlink_msg_deploy_arm_send(
-      chan,
-      mission.get_current_nav_cmd().p1 // holds the SYSID of the copter to arm
-  );
+
+  mavlink_msg_gopro_heartbeat_send(chan,mission.get_current_nav_cmd().p1,2,3);
 }
 
 NOINLINE void Copter::send_deploy(mavlink_channel_t chan)
 {
-  mavlink_msg_deploy_send(
+  mavlink_msg_gopro_get_request_send(
       chan,
-      0);
+      0, 0, 0);
 }
 
 NOINLINE void Copter::send_deploy_complete(mavlink_channel_t chan)
 {
-  mavlink_msg_deploy_complete_send(
+  mavlink_msg_gopro_get_response_send(
       chan,
-      0);
+      0, 0, 0);
 }
 
 NOINLINE void Copter::send_attitude(mavlink_channel_t chan)
@@ -231,6 +228,7 @@ void NOINLINE Copter::send_vfr_hud(mavlink_channel_t chan)
 void NOINLINE Copter::send_current_waypoint(mavlink_channel_t chan)
 {
     mavlink_msg_mission_current_send(chan, mission.get_current_nav_index());
+
 }
 
 #if RANGEFINDER_ENABLED == ENABLED

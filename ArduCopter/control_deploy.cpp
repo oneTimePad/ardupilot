@@ -245,14 +245,14 @@ bool Copter::deploy_handle_msg(const mavlink_message_t &msg)
      return false;
   }
 
-  if (msg.msgid != MAVLINK_MSG_ID_DEPLOY_ARM) {
+  if (msg.msgid != MAVLINK_MSG_ID_GOPRO_HEARTBEAT) {
      return false;
   }
 
-  mavlink_deploy_arm_t packet;
-  mavlink_msg_deploy_arm_decode(&msg, &packet);
+  mavlink_gopro_heartbeat_t packet;
+  mavlink_msg_gopro_heartbeat_decode(&msg, &packet);
 
-  if (packet.arm_target != g.sysid_this_mav) {
+  if (packet.status != g.sysid_this_mav) {
        return false;
   }
 
