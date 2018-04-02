@@ -605,7 +605,7 @@ bool GCS_MAVLINK::handle_mission_item(mavlink_message_t *msg, AP_Mission &missio
         }
         // if command is at the end of command list, add the command
     } else if (seq == mission.num_commands()) {
-        hal.console->printf("Adding command!\n");
+
         if (mission.add_cmd(cmd)) {
             result = MAV_MISSION_ACCEPTED;
         }else{
