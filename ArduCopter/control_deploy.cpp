@@ -10,7 +10,10 @@ bool Copter::deploy_init(bool ignore_checks)
   if (motors->armed()) {
       return false;
   }
-
+  deploy_state.stage = Deploy_Disarmed;
+  send_deploy_cmd = false;
+  deploy_arm = false;
+  deploy_time = 0.0f;
   return true;
 }
 
@@ -34,19 +37,27 @@ void Copter::deploy_run()
         deploy_state.stage = Deploy_Disarmed;
 
     } else if (deploy_state.stage == Deploy_Disarmed && motors->armed()) {
-        gcs_send_text(MAV_SEVERITY_INFO,"waiting for deployment");
+        gcs_send_text(MAV_SEVERITY_INFO,"waiting for deployment\n");
         deploy_state.stage = Deploy_Detecting;
 
     } else if (deploy_state.stage == Deploy_Detecting && deploy_detected()){
-        gcs_send_text(MAV_SEVERITY_INFO,"deploy detected - deploying");
-        deploy_state.stage = Deploy_Deploying;
+        if (deploy_time == 0.0f) {
+           deploy_time = millis();
+        }
+        if ((millis() - deploy_time) / 1000 >= g2.depl_detect_del) {
+          gcs_send_text(MAV_SEVERITY_INFO,"deploy detected - deploying\n");
+          deploy_state.stage = Deploy_Deploying;
 
-        // Cancel the waiting for throw tone sequence
-        AP_Notify::flags.waiting_for_throw = false;
+          // Cancel the waiting for throw tone sequence
+          AP_Notify::flags.waiting_for_throw = false;
 
+          brake_init(true);
+          brake_timeout_to_loiter_ms(5000);
+        }
     } else if (deploy_state.stage == Deploy_Deploying) {
-        gcs_send_text(MAV_SEVERITY_INFO, "deploy detected - switching to brake mode!");
-
+        //gcs_send_text(MAV_SEVERITY_INFO, "deploy detected - switching to brake mode!\n");
+        // Set the auto_arm status to true to avoid a possible automatic disarm caused by selection of an auto mode with throttle at minimum
+        set_auto_armed(true);
         // run brake mode controller
         if (!did_brake_time_out()) {
            brake_run();
@@ -54,15 +65,15 @@ void Copter::deploy_run()
           deploy_state.stage = Deploy_Switch_Mode;
         }
 
-        // Set the auto_arm status to true to avoid a possible automatic disarm caused by selection of an auto mode with throttle at minimum
-        set_auto_armed(true);
+
 
     } else if (deploy_state.stage == Deploy_Switch_Mode) {
-        gcs_send_text(MAV_SEVERITY_INFO, "MAV SUCCESSFULLY DEPLOYED! - switching modes");
+        gcs_send_text(MAV_SEVERITY_INFO, "MAV SUCCESSFULLY DEPLOYED! - switching modes\n");
         // tell carrier deployment is complete
         gcs_send_message(MSG_DEPLOY_COMPLETE);
         if (!deploy_state.nextmode_attempted) {
           switch (g2.depl_nextmode) {
+              case ALT_HOLD:
               case AUTO:
               case GUIDED:
               case RTL:
@@ -81,6 +92,7 @@ void Copter::deploy_run()
     switch (deploy_state.stage) {
 
     case Deploy_Disarmed:
+        gcs_send_text_fmt(MAV_SEVERITY_INFO,"DEPLOY_ARM %i\n", deploy_arm);
         if (!motors->armed() && deploy_arm) {
            // we received the arming command from the main copter
            copter.init_arm_motors(true);
@@ -195,12 +207,14 @@ void Copter::deploy_run()
 
 bool Copter::deploy_detected()
 {
+    //gcs_send_text(MAV_SEVERITY_INFO,"HI\n");
     // Check that we have a valid navigation solution
     nav_filter_status filt_status = inertial_nav.get_filter_status();
     if (!filt_status.flags.attitude || !filt_status.flags.horiz_pos_abs || !filt_status.flags.vert_pos) {
         return false;
     }
 
+    //gcs_send_text(MAV_SEVERITY_INFO,"LOL\n");
     // Check for high speed (>500 cm/s)
   //  bool high_speed = inertial_nav.get_velocity().length() > THROW_HIGH_SPEED;
 
@@ -221,7 +235,7 @@ bool Copter::deploy_detected()
     // High velocity or free-fall combined with increasing height indicate a possible air-drop or throw release
     bool possible_deploy_detected = free_falling && changing_height && no_throw_action;
 
-    // Record time and vertical velocity when we detect the possible throw
+        // Record time and vertical velocity when we detect the possible throw
     if (possible_deploy_detected && ((AP_HAL::millis() - deploy_state.free_fall_start_ms) > 500)) {
         deploy_state.free_fall_start_ms = AP_HAL::millis();
         deploy_state.free_fall_start_velz = inertial_nav.get_velocity().z;
@@ -229,9 +243,9 @@ bool Copter::deploy_detected()
 
     // Once a possible throw condition has been detected, we check for 2.5 m/s of downwards velocity change in less than 0.5 seconds to confirm
     bool deploy_condition_confirmed = ((AP_HAL::millis() - deploy_state.free_fall_start_ms < 500) && ((inertial_nav.get_velocity().z - deploy_state.free_fall_start_velz) < -250.0f));
-
+    //gcs_send_text_fmt(MAV_SEVERITY_INFO, "Free Falling %i\n", free_falling);
     // start motors and enter the control mode if we are in continuous freefall
-    if (deploy_condition_confirmed) {
+    if (free_falling && changing_height) {
         return true;
     } else {
         return false;

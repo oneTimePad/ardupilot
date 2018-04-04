@@ -28,7 +28,7 @@ bool Copter::brake_init(bool ignore_checks)
         }
 
         brake_timeout_ms = 0;
-
+        gcs_send_text_fmt(MAV_SEVERITY_INFO, "BREAK SUCCESS!\n");
         return true;
     }else{
         return false;
@@ -41,6 +41,7 @@ void Copter::brake_run()
 {
     // if not auto armed set throttle to zero and exit immediately
     if (!motors->armed() || !ap.auto_armed || !motors->get_interlock()) {
+
         wp_nav->init_brake_target(BRAKE_MODE_DECEL_RATE);
 #if FRAME_CONFIG == HELI_FRAME  // Helicopters always stabilize roll/pitch/yaw
         // call attitude controller
@@ -61,9 +62,10 @@ void Copter::brake_run()
     }
 
     // if landed immediately disarm
-    if (ap.land_complete) {
-        init_disarm_motors();
-    }
+  //  if (ap.land_complete) {
+  //      gcs_send_text_fmt(MAV_SEVERITY_INFO,"DISARMING!!!\n");
+  //      init_disarm_motors();
+  //  }
 
     // set motors to full range
     motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);

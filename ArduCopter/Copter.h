@@ -445,6 +445,7 @@ private:
     // deployee used members
     bool deploy_arm;
     bool send_deploy_cmd;
+    float deploy_time;
 
     // carrier used members
     int carrier_deploy_id = -1;
